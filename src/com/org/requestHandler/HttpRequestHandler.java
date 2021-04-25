@@ -1,5 +1,8 @@
 package com.org.requestHandler;
 
+import com.org.fileHandler.FileManagement;
+import com.org.responseHandler.ReponseHandler;
+
 import java.io.*;
 import java.net.Socket;
 import java.net.URLConnection;
@@ -10,11 +13,14 @@ public class HttpRequestHandler implements Runnable {
     final static String CRLF = "\r\n";
     Socket socket;
     String writeToFile;
+    FileManagement fileManagement = new FileManagement();
+    ReponseHandler reponseHandler = new ReponseHandler();
 
     public HttpRequestHandler(Socket socket, String dirName) {
         this.socket = socket;
-        String filename = "//Write_" + socket.getLocalPort() + ".txt";
-        this.writeToFile = new StringBuilder().append("C:/").append(dirName).append(filename).toString();
+        String directoryPath = "C:/"+dirName;
+        this.writeToFile = new StringBuilder().append(directoryPath).append(fileManagement.createRandomFileName()).toString();
+        fileManagement.createDirectories(directoryPath);
     }
 
     public void run() {
@@ -29,40 +35,22 @@ public class HttpRequestHandler implements Runnable {
         return URLConnection.guessContentTypeFromName(filename);
     }
 
-    private static void sendBytes(FileInputStream fis, OutputStream os)
-            throws Exception {
-        try {
-            int n;
-            while ((n = fis.read()) != -1) {
-                os.write(n);
-            }
-        } finally {
-            if (fis != null) {
-                fis.close();
-            }
-            if (os != null) {
-                os.close();
-            }
-        }
-        System.out.println("File Copied");
-
-    }
 
     private void processRequest(HttpRequestHandler httpRequestHandler) throws Exception {
 
-        InputStream is = httpRequestHandler.socket.getInputStream();
-        DataOutputStream os = new DataOutputStream(new FileOutputStream(this.writeToFile));
+        InputStream inputStream = httpRequestHandler.socket.getInputStream();
+        DataOutputStream outputStream = new DataOutputStream(new FileOutputStream(this.writeToFile));
 
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader(is));
+        BufferedReader bufferedReader = new BufferedReader(
+                new InputStreamReader(inputStream));
 
-        String requestLine = br.readLine();
+        String requestLine = bufferedReader.readLine();
 
         System.out.println();
         System.out.println(requestLine);
 
         String headerLine = null;
-        while ((headerLine = br.readLine()).length() != 0) {
+        while ((headerLine = bufferedReader.readLine()).length() != 0) {
             System.out.println(headerLine);
         }
 
@@ -74,10 +62,10 @@ public class HttpRequestHandler implements Runnable {
 
             fileName = new StringBuilder().append("C:/").append(fileName).toString();
 
-            FileInputStream fis = null;
+            FileInputStream fileInputStream = null;
             boolean fileExists = true;
             try {
-                fis = new FileInputStream(fileName);
+                fileInputStream = new FileInputStream(fileName);
             } catch (FileNotFoundException e) {
                 fileExists = false;
             }
@@ -98,32 +86,20 @@ public class HttpRequestHandler implements Runnable {
             }
 
             if (fileExists) {
-                sendBytes(fis, os);
-                fis.close();
+                fileManagement.writeToFile(fileInputStream, outputStream);
+                fileInputStream.close();
             } else {
-                os.writeBytes(CRLF);
+                outputStream.writeBytes(CRLF);
             }
 
-            sendSuccessResponse(socket);
+            reponseHandler.sendSuccessResponse(socket);
 
         } else
         {
-            sendErrorResponse(socket);
+            reponseHandler.sendErrorResponse(socket);
         }
-        os.close();
-        br.close();
-    }
-
-    private static void sendSuccessResponse(Socket client) throws IOException {
-        String httpResponse = "HTTP/1.1 200 OK\r\n\r\n";
-        client.getOutputStream().write(httpResponse.getBytes("UTF-8"));
-        client.close();
-    }
-
-    private static void sendErrorResponse(Socket client) throws IOException {
-        String httpResponse = "HTTP/1.1 405 Method not allowed.\r\n\r\n";
-        client.getOutputStream().write(httpResponse.getBytes("UTF-8"));
-        client.close();
+        outputStream.close();
+        bufferedReader.close();
     }
 
 }

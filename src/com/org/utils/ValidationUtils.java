@@ -1,8 +1,6 @@
 package com.org.utils;
 
-import com.org.constants.ApplicationConstants;
 import com.org.fileHandler.FileManagement;
-
 
 public class ValidationUtils {
 

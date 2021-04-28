@@ -3,17 +3,11 @@ package com.org.fileHandler;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.OutputStream;
-import java.util.Random;
 
 public class FileManagement {
 
-    public String createRandomFileName(){
-        Random random = new Random();
-        String filename = "//Write_" +   random.nextInt(5000)   + ".txt";
-        return filename;
-    }
 
-    public boolean createDirectories(String dir){
+    public static boolean createDirectories(String dir){
         File file = new File(dir);
         return file.mkdirs();
     }

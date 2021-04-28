@@ -1,7 +1,7 @@
 package com.org.requestHandler;
 
 import com.org.fileHandler.FileManagement;
-import com.org.responseHandler.ReponseHandler;
+import com.org.responseHandler.ResponseHandler;
 
 import java.io.*;
 import java.net.Socket;
@@ -10,25 +10,17 @@ import java.util.StringTokenizer;
 
 public class HttpRequestHandler implements Runnable {
 
-    final static String CRLF = "\r\n";
-    Socket socket;
-    String writeToFile;
-    FileManagement fileManagement = new FileManagement();
-    ReponseHandler reponseHandler = new ReponseHandler();
+    private final static String CRLF = "\r\n";
+    private Socket socket;
 
-    public HttpRequestHandler(Socket socket, String dirName) {
+    public HttpRequestHandler(Socket socket) {
         this.socket = socket;
-        String directoryPath = "C:/"+dirName;
-        this.writeToFile = new StringBuilder().append(directoryPath).append(fileManagement.createRandomFileName()).toString();
-        fileManagement.createDirectories(directoryPath);
     }
 
     public void run() {
-        try {
-            processRequest(this);
-        } catch (Exception e) {
-            System.out.println(e);
-        }
+
+        processRequest(this);
+
     }
 
     private String contentType(String filename) {
@@ -36,70 +28,73 @@ public class HttpRequestHandler implements Runnable {
     }
 
 
-    private void processRequest(HttpRequestHandler httpRequestHandler) throws Exception {
+    private void processRequest(HttpRequestHandler httpRequestHandler) {
 
-        InputStream inputStream = httpRequestHandler.socket.getInputStream();
-        DataOutputStream outputStream = new DataOutputStream(new FileOutputStream(this.writeToFile));
+        DataOutputStream outputStream = null;
+       // BufferedReader bufferedReader = null;
+        try {
+            InputStream inputStream = this.socket.getInputStream();
+            DataOutputStream os = new DataOutputStream(new FileOutputStream(new StringBuilder().append("C:/").append("/tmp").append("//filename").toString()));
 
-        BufferedReader bufferedReader = new BufferedReader(
-                new InputStreamReader(inputStream));
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
-        String requestLine = bufferedReader.readLine();
+            String requestLine = bufferedReader.readLine();
 
-        System.out.println();
-        System.out.println(requestLine);
+            System.out.println();
+            System.out.println(requestLine);
 
-        String headerLine = null;
-        while ((headerLine = bufferedReader.readLine()).length() != 0) {
-            System.out.println(headerLine);
-        }
+            StringTokenizer tokens = new StringTokenizer(requestLine);
+            if (requestLine.contains("POST")) {
+                tokens.nextToken();
+                String fileName = tokens.nextToken();
 
+                fileName = new StringBuilder().append("C:/").append(fileName).toString();
+                outputStream = new DataOutputStream(new FileOutputStream(fileName));
 
-        StringTokenizer tokens = new StringTokenizer(requestLine);
-        if (requestLine.contains("POST")) {
-            tokens.nextToken();
-            String fileName = tokens.nextToken();
+                FileInputStream fileInputStream = null;
+                boolean fileExists = true;
+                try {
+                    fileInputStream = new FileInputStream(fileName);
+                } catch (FileNotFoundException e) {
+                    fileExists = false;
+                }
 
-            fileName = new StringBuilder().append("C:/").append(fileName).toString();
+                String statusLine = null;
+                String contentTypeLine = null;
+                String entityBody = null;
+                if (fileExists) {
+                    statusLine = "200 OK";
+                    contentTypeLine = "Content-type: " +
+                            httpRequestHandler.contentType(fileName) + CRLF;
+                } else {
+                    statusLine = "404 Not Found";
+                    contentTypeLine = "Content-type";
+                    entityBody = "<HTML>" +
+                            "<HEAD><TITLE>Not Found</TITLE></HEAD>" +
+                            "<BODY>Not Found</BODY></HTML>";
+                }
 
-            FileInputStream fileInputStream = null;
-            boolean fileExists = true;
-            try {
-                fileInputStream = new FileInputStream(fileName);
-            } catch (FileNotFoundException e) {
-                fileExists = false;
-            }
+                if (fileExists) {
+                    FileManagement.writeToFile(fileInputStream, outputStream);
+                    fileInputStream.close();
+                } else {
+                    outputStream.writeBytes(CRLF);
+                }
 
-            String statusLine = null;
-            String contentTypeLine = null;
-            String entityBody = null;
-            if (fileExists) {
-                statusLine = "200 OK";
-                contentTypeLine = "Content-type: " +
-                        httpRequestHandler.contentType(fileName) + CRLF;
+                ResponseHandler.sendSuccessResponse(socket.getOutputStream());
+
             } else {
-                statusLine = "404 Not Found";
-                contentTypeLine = "Content-type";
-                entityBody = "<HTML>" +
-                        "<HEAD><TITLE>Not Found</TITLE></HEAD>" +
-                        "<BODY>Not Found</BODY></HTML>";
+                ResponseHandler.sendErrorResponse(socket.getOutputStream());
             }
+            outputStream.close();
+            bufferedReader.close();
+            socket.close();
 
-            if (fileExists) {
-                fileManagement.writeToFile(fileInputStream, outputStream);
-                fileInputStream.close();
-            } else {
-                outputStream.writeBytes(CRLF);
-            }
-
-            reponseHandler.sendSuccessResponse(socket);
-
-        } else
-        {
-            reponseHandler.sendErrorResponse(socket);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        outputStream.close();
-        bufferedReader.close();
     }
 
 }

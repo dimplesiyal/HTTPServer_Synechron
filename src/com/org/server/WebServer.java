@@ -14,7 +14,6 @@ import java.util.concurrent.Executors;
 public class WebServer {
 
 
-
     public static void main(String[] args) throws InvalidArgumentException {
 
         int argumentsLength = args.length;
@@ -29,15 +28,15 @@ public class WebServer {
                 }
 
                 pool = Executors.newFixedThreadPool(maxPoolSize);
-                ServerSocket serverSocket = new ServerSocket(portNumber);
-                System.out.println("Listening for connection on port" + portNumber + "  ....");
-                while (true) {
+                try (ServerSocket serverSocket = new ServerSocket(portNumber)) {
+                    System.out.println("Listening for connection on port" + portNumber + "  ....");
+                    while (true) {
 
-                    Socket socket = serverSocket.accept();
-                    HttpRequestHandler httpRequestHandler = new HttpRequestHandler(socket);
-                    pool.execute(httpRequestHandler);
+                        Socket socket = serverSocket.accept();
+                        HttpRequestHandler httpRequestHandler = new HttpRequestHandler(socket, directoryName);
+                        pool.execute(httpRequestHandler);
+                    }
                 }
-
             }
         } catch (IOException e) {
             e.printStackTrace();

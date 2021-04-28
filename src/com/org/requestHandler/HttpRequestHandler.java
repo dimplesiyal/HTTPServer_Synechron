@@ -12,15 +12,15 @@ public class HttpRequestHandler implements Runnable {
 
     private final static String CRLF = "\r\n";
     private Socket socket;
+    private String dirName;
 
-    public HttpRequestHandler(Socket socket) {
+    public HttpRequestHandler(Socket socket, String directoryName) {
         this.socket = socket;
+        this.dirName = directoryName;
     }
 
     public void run() {
-
-        processRequest(this);
-
+            processRequest(this);
     }
 
     private String contentType(String filename) {
@@ -30,11 +30,8 @@ public class HttpRequestHandler implements Runnable {
 
     private void processRequest(HttpRequestHandler httpRequestHandler) {
 
-        DataOutputStream outputStream = null;
-       // BufferedReader bufferedReader = null;
         try {
-            InputStream inputStream = this.socket.getInputStream();
-            DataOutputStream os = new DataOutputStream(new FileOutputStream(new StringBuilder().append("C:/").append("/tmp").append("//filename").toString()));
+            InputStream inputStream = httpRequestHandler.socket.getInputStream();
 
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
@@ -48,8 +45,10 @@ public class HttpRequestHandler implements Runnable {
                 tokens.nextToken();
                 String fileName = tokens.nextToken();
 
+                String writeToFile = new StringBuilder().append(this.dirName).append(fileName).toString();
+                DataOutputStream outputStream = new DataOutputStream(new FileOutputStream(writeToFile));
+
                 fileName = new StringBuilder().append("C:/").append(fileName).toString();
-                outputStream = new DataOutputStream(new FileOutputStream(fileName));
 
                 FileInputStream fileInputStream = null;
                 boolean fileExists = true;
@@ -82,11 +81,12 @@ public class HttpRequestHandler implements Runnable {
                 }
 
                 ResponseHandler.sendSuccessResponse(socket.getOutputStream());
+                outputStream.close();
 
             } else {
                 ResponseHandler.sendErrorResponse(socket.getOutputStream());
             }
-            outputStream.close();
+
             bufferedReader.close();
             socket.close();
 
@@ -96,5 +96,4 @@ public class HttpRequestHandler implements Runnable {
             e.printStackTrace();
         }
     }
-
 }

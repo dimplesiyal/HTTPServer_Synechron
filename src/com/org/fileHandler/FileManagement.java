@@ -3,9 +3,9 @@ package com.org.fileHandler;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.OutputStream;
+import java.util.Random;
 
 public class FileManagement {
-
 
     public static boolean createDirectories(String dir){
         File file = new File(dir);
